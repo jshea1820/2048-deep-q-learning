@@ -8,7 +8,6 @@ import random
 import time
 import math
 
-
 class DQNetwork:
     def __init__(self, state_size, action_size, learning_rate):
 
