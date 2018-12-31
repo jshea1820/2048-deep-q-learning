@@ -69,66 +69,57 @@ class Memory():
         return [self.buffer[i] for i in index]
 
 
-class Game:
-    def __init__(self):
-        self.init_matrix()
+class Environment:
 
-    def gen(self):
-        return randint(0, GRID_LEN - 1)
+    def __init__(self, state_size, action_size):
+        self.state_size = state_size
+        self.action_size = action_size
+        self.state = [0]*state_size
+        self.map = [
+            [0,   0,   0,   0,   0],
+            [0,  -1,   0,  -1,   0],
+            [0,  -1,   0,  -1,   0],
+            [0,   0,   0,   0,   0],
+            [20,  0,  -1,   0, 100],
+        ]
 
-    def init_matrix(self):
-        self.matrix = new_game(4)
-        self.matrix = add_two(self.matrix)
-        self.matrix = add_two(self.matrix)
+    def reset(self):
 
-    def update_board(self, action):
+        self.position = (0,0)
+        self.retrieved_key = False
 
-        action = [up,down,left,right][action]
-        self.matrix, done, d_score = action(self.matrix)
-        game_over = False
-        if done:
-            self.matrix = add_two(self.matrix)
-            done=False
-            if game_state(self.matrix)=='win' or game_state(self.matrix)=='lose':
-                game_over = True
+        self.state = [0]*state_size
+        self.state[0] = 
+        self.state = np.asarray(self.state)
 
-        return [d_score, game_over]
+        return self.state
 
+    def valid_actions(self):
 
-    def generate_next(self):
-        index = (self.gen(), self.gen())
-        while self.matrix[index[0]][index[1]] != 0:
-            index = (self.gen(), self.gen())
-        self.matrix[index[0]][index[1]] = 2
-
-    def __str__(self):
-
-        return str(self.matrix[0]) + "\n" + str(self.matrix[1]) + "\n" + str(self.matrix[2]) + "\n" + str(self.matrix[3])
+        
 
 
 
-def populate_memory(game, memory):
+
+
+def populate_memory(environment, memory):
 
     for i in range(pretrain_length):
         
-        # If it's the first step, flatten the board matrix and set state variable
+        # If it's the first step, reset the environment
         if i == 0:
-            state = convert_matrix(game.matrix)
+            state = environment.reset()
         
         # Choose a random action and evaluate reward
         action = random.choice(possible_actions).index(1)
-        reward, game_over = game.update_board(action)
-        next_state = convert_matrix(game.matrix)
+        reward, episode_done = environment.update(action)
+        next_state = environment.get_state()
         memory.add((state, action, reward, next_state))
         
-        # If we're dead
-        if game_over:
-            
-            # Start a new episode
-            game.init_matrix()
-            
-            # First we need a state
-            state = convert_matrix(game.matrix)
+        # If the episode is complete, reset the state
+        if episode_done:
+
+            state = environment.reset()
             
         else:
 
@@ -138,9 +129,8 @@ def populate_memory(game, memory):
     return memory
 
 
-def train(game, memory):
+def train(environment, memory):
 
-    print("Training beginning...")
     with tf.Session() as sess:
 
         # Initialize the weights of the network
@@ -148,8 +138,6 @@ def train(game, memory):
         
         # Initialize the decay rate (that will use to reduce epsilon)
         decay_step = 0
-
-        losses = []
 
         # Trains the network
         for episode in range(total_episodes):
@@ -275,19 +263,18 @@ def to_file(l):
     
 
 ### MODEL HYPERPARAMETERS
-state_size = 16
+state_size = 25
 action_size = 4
 learning_rate =  0.0002      # Alpha (aka learning rate)
-possible_actions = [    # one-hot matrix indicating chosen action
-    [1,0,0,0],
-    [0,1,0,0],
-    [0,0,1,0],
-    [0,0,0,1]
-]
+
+# One-hot list of matrix containing actions
+possible_actions = []
+for i in range(action_size):
+    possible_actions.append([0]*i + [1] + [0]*(action_size - i - 1))
 
 ### TRAINING HYPERPARAMETERS
-total_episodes = 500        # Total episodes for training
-max_steps = 5000              # Max possible steps in an episode
+total_episodes = 100        # Total episodes for training
+max_steps = 100              # Max possible steps in an episode
 batch_size = 64
 
 # Exploration parameters for epsilon greedy strategy
@@ -307,12 +294,11 @@ DQNetwork = DQNetwork(state_size, action_size, learning_rate)
 memory = Memory(max_size = memory_size)
 
 # Create the environment
-game = Game()
+environment = Environment(state_size, action_size)
 
 # Populate the memory buffer and reset game
-memory = populate_memory(game, memory)
-game = Game()
+memory = populate_memory(environment, memory)
 
 # Conduct training
-train(game, memory)
+train(environment, memory)
 
