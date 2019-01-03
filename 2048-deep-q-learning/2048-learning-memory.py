@@ -26,13 +26,13 @@ class DQNetwork:
         # Defines fully connected layer
         self.fc1 = tf.layers.dense(
             inputs = self.state_input,
-            units = 512,
+            units = 256,
             kernel_initializer = tf.contrib.layers.xavier_initializer()
         )
 
         self.fc2 = tf.layers.dense(
             inputs = self.fc1,
-            units = 256,
+            units = 128,
             kernel_initializer = tf.contrib.layers.xavier_initializer()
         )
 
@@ -140,6 +140,7 @@ def populate_memory(game, memory):
 
 def train(game, memory):
 
+    saver = tf.train.Saver()
     print("Training beginning...")
     with tf.Session() as sess:
 
@@ -227,6 +228,7 @@ def train(game, memory):
 
         print(losses)
         to_file(losses)
+        save_path = saver.save(sess, "model.ckpt")
 
 
 
